@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/nvsces/auth/gen/auth/v1;authv1";
+
+// AuthService is the identity service for the Service Constructor demo. It
+// registers users by login/password, issues platform session tokens (the same
+// HS256 JWT the constructor authenticates /pay with, sub=userId), and provisions
+// each user a TON deposit wallet. For the demo every user shares one on-chain
+// address but gets a unique memo tag; deposits are matched to the user by tag.
+service AuthService {
+  // Register creates a user and provisions their TON wallet + deposit memo.
+  rpc Register(RegisterRequest) returns (AuthResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/register"
+      body: "*"
+    };
+  }
+
+  // Login authenticates a user and returns a fresh session token.
+  rpc Login(LoginRequest) returns (AuthResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/login"
+      body: "*"
+    };
+  }
+
+  // Me returns the caller's profile, resolved from the bearer session token.
+  rpc Me(MeRequest) returns (User) {
+    option (google.api.http) = {get: "/v1/auth/me"};
+  }
+
+  // ListAccounts returns the caller's accounts with live balances (fetched from
+  // the ledger). This powers the personal cabinet's accounts view.
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
+    option (google.api.http) = {get: "/v1/auth/accounts"};
+  }
+
+  // DepositByMemo credits a deposit to the user identified by memo tag. It is the
+  // demo stand-in for an on-chain watcher: it looks up the user by memo and
+  // credits the ledger. Idempotent on ref.
+  rpc DepositByMemo(DepositByMemoRequest) returns (DepositResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/deposits"
+      body: "*"
+    };
+  }
+}
+
+message RegisterRequest {
+  string login = 1;
+  string password = 2;
+}
+
+message LoginRequest {
+  string login = 1;
+  string password = 2;
+}
+
+// AuthResponse carries the session token and the user it belongs to.
+message AuthResponse {
+  string token = 1;
+  User user = 2;
+}
+
+message MeRequest {}
+
+// User is the public profile. It never carries the password hash. The wallet
+// and on-chain deposit routing (ton_address, deposit_memo) are owned by the
+// ledger service and provisioned at registration; auth caches them for display.
+message User {
+  string user_id = 1;
+  string login = 2;
+  // ton_address is the (shared, in the demo) deposit address, from the ledger.
+  string ton_address = 3;
+  // deposit_memo is the per-user tag that routes an on-chain deposit, from the ledger.
+  string deposit_memo = 4;
+  // wallet_id is the user's ledger wallet holding their balance.
+  string wallet_id = 5;
+}
+
+message ListAccountsRequest {}
+
+// Account is a user's ledger account with its current balance for the cabinet.
+message Account {
+  string wallet_id = 1;
+  int64 currency_id = 2;
+  string ton_address = 3;
+  string deposit_memo = 4;
+  // available and held are decimal strings from the ledger.
+  string available = 5;
+  string held = 6;
+}
+
+message ListAccountsResponse {
+  repeated Account accounts = 1;
+}
+
+message DepositByMemoRequest {
+  // memo routes the deposit to a user; ref is the idempotency key (tx hash).
+  string memo = 1;
+  string ref = 2;
+  string amount = 3;
+  int64 currency_id = 4;
+}
+
+message DepositResponse {
+  string user_id = 1;
+  bool applied = 2;
+}
