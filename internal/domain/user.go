@@ -28,4 +28,8 @@ var (
 	ErrInvalidArgument = errors.New("invalid argument")
 	ErrUnauthenticated = errors.New("unauthenticated")
 	ErrMemoNotFound    = errors.New("no user for deposit memo")
+	ErrInternal        = errors.New("internal error")
+	// ErrRealCurrencyDeposit rejects a mock deposit for a real currency: real money
+	// is funded only by the on-chain deposit watcher, never by the demo endpoint.
+	ErrRealCurrencyDeposit = errors.New("mock deposit not allowed for a real currency")
 )

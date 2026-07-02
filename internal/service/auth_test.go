@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -44,26 +45,50 @@ func (s *fakeStore) ByID(_ context.Context, id string) (*domain.User, error) {
 	return u, nil
 }
 
-// fakeLedger records provisioned accounts and credits by memo.
+// fakeLedger records provisioned accounts (one per user+currency) and credits by
+// memo. It seeds two currencies to mirror the real catalog: DEV (test money) and
+// GRAM (real money).
 type fakeLedger struct {
-	accounts map[string]*LedgerAccount // userID -> account
-	byMemo   map[string]string         // memo -> userID
-	credited map[string]string         // ref -> amount (idempotency)
+	currencies []*Currency
+	accounts   map[string]*LedgerAccount // "userID/ccy" -> account
+	byUser     map[string][]*LedgerAccount
+	byMemo     map[string]string // memo -> userID
+	credited   map[string]string // ref -> amount (idempotency)
 }
 
 func newFakeLedger() *fakeLedger {
-	return &fakeLedger{accounts: map[string]*LedgerAccount{}, byMemo: map[string]string{}, credited: map[string]string{}}
+	return &fakeLedger{
+		currencies: []*Currency{
+			{ID: 1, Code: "DEV", IsReal: false},
+			{ID: 2, Code: "GRAM", IsReal: true},
+		},
+		accounts: map[string]*LedgerAccount{},
+		byUser:   map[string][]*LedgerAccount{},
+		byMemo:   map[string]string{},
+		credited: map[string]string{},
+	}
 }
 
-func (l *fakeLedger) CreateAccount(_ context.Context, userID string, _ int64) (*LedgerAccount, error) {
-	if a, ok := l.accounts[userID]; ok {
+func accKey(userID string, ccy int64) string {
+	return userID + "/" + strconv.FormatInt(ccy, 10)
+}
+
+func (l *fakeLedger) CreateAccount(_ context.Context, userID string, ccy int64) (*LedgerAccount, error) {
+	if a, ok := l.accounts[accKey(userID, ccy)]; ok {
 		return a, nil
 	}
-	memo := "memo-" + userID
-	a := &LedgerAccount{WalletID: "wlt-" + userID, TONAddress: "UQ_shared", Memo: memo}
-	l.accounts[userID] = a
+	memo := "memo-" + userID + "-" + strconv.FormatInt(ccy, 10)
+	a := &LedgerAccount{WalletID: "wlt-" + userID + "-" + strconv.FormatInt(ccy, 10), TONAddress: "UQ_shared", Memo: memo, CurrencyID: ccy}
+	l.accounts[accKey(userID, ccy)] = a
+	l.byUser[userID] = append(l.byUser[userID], a)
 	l.byMemo[memo] = userID
 	return a, nil
+}
+func (l *fakeLedger) ListAccounts(_ context.Context, userID string) ([]*LedgerAccount, error) {
+	return l.byUser[userID], nil
+}
+func (l *fakeLedger) ListCurrencies(_ context.Context) ([]*Currency, error) {
+	return l.currencies, nil
 }
 func (l *fakeLedger) GetBalance(_ context.Context, walletID string, _ int64) (*Balance, error) {
 	return &Balance{Available: "0", Held: "0"}, nil
@@ -149,6 +174,66 @@ func TestDepositByMemoRoutesToUserAndIsIdempotent(t *testing.T) {
 	_, applied, err = a.DepositByMemo(context.Background(), u.DepositMemo, "tx1", "10.00", 1)
 	if err != nil || applied {
 		t.Fatalf("replay: applied=%v err=%v (want false)", applied, err)
+	}
+}
+
+func TestRegisterProvisionsAccountPerCurrency(t *testing.T) {
+	a, fl := newAuth()
+	_, u, err := a.Register(context.Background(), "grace", "secret1")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	// One account provisioned per catalog currency (DEV + GRAM).
+	if got := len(fl.byUser[u.ID]); got != 2 {
+		t.Fatalf("provisioned %d accounts, want 2", got)
+	}
+	// The default currency (1) account is cached on the user row.
+	if u.WalletID != "wlt-"+u.ID+"-1" {
+		t.Errorf("primary wallet = %q, want default-currency wallet", u.WalletID)
+	}
+}
+
+func TestListAccountsReturnsAllCurrencies(t *testing.T) {
+	a, _ := newAuth()
+	_, u, err := a.Register(context.Background(), "heidi", "secret1")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	views, err := a.ListAccounts(context.Background(), u.ID)
+	if err != nil {
+		t.Fatalf("ListAccounts: %v", err)
+	}
+	if len(views) != 2 {
+		t.Fatalf("got %d accounts, want 2", len(views))
+	}
+	seen := map[int64]bool{}
+	for _, v := range views {
+		seen[v.CurrencyID] = true
+		if v.WalletID == "" || v.Available == "" {
+			t.Errorf("incomplete account view: %+v", v)
+		}
+	}
+	if !seen[1] || !seen[2] {
+		t.Errorf("missing a currency: seen=%v", seen)
+	}
+}
+
+func TestDepositByMemoRejectsRealCurrency(t *testing.T) {
+	a, _ := newAuth()
+	_, u, _ := a.Register(context.Background(), "ivan", "secret1")
+	// Currency 2 (GRAM) is real money: a mock deposit must be rejected.
+	_, _, err := a.DepositByMemo(context.Background(), u.DepositMemo, "tx-real", "5.00", 2)
+	if !errors.Is(err, domain.ErrRealCurrencyDeposit) {
+		t.Fatalf("err = %v, want ErrRealCurrencyDeposit", err)
+	}
+}
+
+func TestDepositByMemoRejectsUnknownCurrency(t *testing.T) {
+	a, _ := newAuth()
+	_, u, _ := a.Register(context.Background(), "judy", "secret1")
+	_, _, err := a.DepositByMemo(context.Background(), u.DepositMemo, "tx-x", "5.00", 999)
+	if !errors.Is(err, domain.ErrInvalidArgument) {
+		t.Fatalf("err = %v, want ErrInvalidArgument", err)
 	}
 }
 

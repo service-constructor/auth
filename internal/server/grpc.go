@@ -69,6 +69,25 @@ func (s *AuthServer) ListAccounts(ctx context.Context, _ *authv1.ListAccountsReq
 	return &authv1.ListAccountsResponse{Accounts: out}, nil
 }
 
+func (s *AuthServer) ListCurrencies(ctx context.Context, _ *authv1.ListCurrenciesRequest) (*authv1.ListCurrenciesResponse, error) {
+	currencies, err := s.svc.ListCurrencies(ctx)
+	if err != nil {
+		return nil, toStatus(err)
+	}
+	out := make([]*authv1.Currency, 0, len(currencies))
+	for _, c := range currencies {
+		out = append(out, &authv1.Currency{
+			Id:       c.ID,
+			Code:     c.Code,
+			Name:     c.Name,
+			Symbol:   c.Symbol,
+			Decimals: c.Decimals,
+			IsReal:   c.IsReal,
+		})
+	}
+	return &authv1.ListCurrenciesResponse{Currencies: out}, nil
+}
+
 func (s *AuthServer) DepositByMemo(ctx context.Context, req *authv1.DepositByMemoRequest) (*authv1.DepositResponse, error) {
 	userID, applied, err := s.svc.DepositByMemo(ctx, req.GetMemo(), req.GetRef(), req.GetAmount(), req.GetCurrencyId())
 	if err != nil {
@@ -100,7 +119,7 @@ func toStatus(err error) error {
 		return status.Error(codes.Unauthenticated, err.Error())
 	case errors.Is(err, domain.ErrUserNotFound), errors.Is(err, domain.ErrMemoNotFound):
 		return status.Error(codes.NotFound, err.Error())
-	case errors.Is(err, domain.ErrInvalidArgument):
+	case errors.Is(err, domain.ErrInvalidArgument), errors.Is(err, domain.ErrRealCurrencyDeposit):
 		return status.Error(codes.InvalidArgument, err.Error())
 	default:
 		return status.Error(codes.Internal, err.Error())

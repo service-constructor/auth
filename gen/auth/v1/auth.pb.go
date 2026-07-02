@@ -463,6 +463,171 @@ func (x *ListAccountsResponse) GetAccounts() []*Account {
 	return nil
 }
 
+type ListCurrenciesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCurrenciesRequest) Reset() {
+	*x = ListCurrenciesRequest{}
+	mi := &file_auth_v1_auth_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCurrenciesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCurrenciesRequest) ProtoMessage() {}
+
+func (x *ListCurrenciesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCurrenciesRequest.ProtoReflect.Descriptor instead.
+func (*ListCurrenciesRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{8}
+}
+
+// Currency is one entry in the reference catalog, mirrored from the ledger.
+type Currency struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`                    // short machine code, e.g. DEV, GRAM
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`                    // display name
+	Symbol        string                 `protobuf:"bytes,4,opt,name=symbol,proto3" json:"symbol,omitempty"`                // display symbol/ticker
+	Decimals      int32                  `protobuf:"varint,5,opt,name=decimals,proto3" json:"decimals,omitempty"`           // on-chain precision (informational)
+	IsReal        bool                   `protobuf:"varint,6,opt,name=is_real,json=isReal,proto3" json:"is_real,omitempty"` // false = test/dev money (mock-fundable), true = real money
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Currency) Reset() {
+	*x = Currency{}
+	mi := &file_auth_v1_auth_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Currency) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Currency) ProtoMessage() {}
+
+func (x *Currency) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Currency.ProtoReflect.Descriptor instead.
+func (*Currency) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *Currency) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Currency) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *Currency) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Currency) GetSymbol() string {
+	if x != nil {
+		return x.Symbol
+	}
+	return ""
+}
+
+func (x *Currency) GetDecimals() int32 {
+	if x != nil {
+		return x.Decimals
+	}
+	return 0
+}
+
+func (x *Currency) GetIsReal() bool {
+	if x != nil {
+		return x.IsReal
+	}
+	return false
+}
+
+type ListCurrenciesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Currencies    []*Currency            `protobuf:"bytes,1,rep,name=currencies,proto3" json:"currencies,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCurrenciesResponse) Reset() {
+	*x = ListCurrenciesResponse{}
+	mi := &file_auth_v1_auth_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCurrenciesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCurrenciesResponse) ProtoMessage() {}
+
+func (x *ListCurrenciesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCurrenciesResponse.ProtoReflect.Descriptor instead.
+func (*ListCurrenciesResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListCurrenciesResponse) GetCurrencies() []*Currency {
+	if x != nil {
+		return x.Currencies
+	}
+	return nil
+}
+
 type DepositByMemoRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// memo routes the deposit to a user; ref is the idempotency key (tx hash).
@@ -476,7 +641,7 @@ type DepositByMemoRequest struct {
 
 func (x *DepositByMemoRequest) Reset() {
 	*x = DepositByMemoRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[8]
+	mi := &file_auth_v1_auth_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -488,7 +653,7 @@ func (x *DepositByMemoRequest) String() string {
 func (*DepositByMemoRequest) ProtoMessage() {}
 
 func (x *DepositByMemoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[8]
+	mi := &file_auth_v1_auth_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -501,7 +666,7 @@ func (x *DepositByMemoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DepositByMemoRequest.ProtoReflect.Descriptor instead.
 func (*DepositByMemoRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{8}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DepositByMemoRequest) GetMemo() string {
@@ -542,7 +707,7 @@ type DepositResponse struct {
 
 func (x *DepositResponse) Reset() {
 	*x = DepositResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[9]
+	mi := &file_auth_v1_auth_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -554,7 +719,7 @@ func (x *DepositResponse) String() string {
 func (*DepositResponse) ProtoMessage() {}
 
 func (x *DepositResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[9]
+	mi := &file_auth_v1_auth_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -567,7 +732,7 @@ func (x *DepositResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DepositResponse.ProtoReflect.Descriptor instead.
 func (*DepositResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{9}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DepositResponse) GetUserId() string {
@@ -617,7 +782,19 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\tavailable\x18\x05 \x01(\tR\tavailable\x12\x12\n" +
 	"\x04held\x18\x06 \x01(\tR\x04held\"D\n" +
 	"\x14ListAccountsResponse\x12,\n" +
-	"\baccounts\x18\x01 \x03(\v2\x10.auth.v1.AccountR\baccounts\"u\n" +
+	"\baccounts\x18\x01 \x03(\v2\x10.auth.v1.AccountR\baccounts\"\x17\n" +
+	"\x15ListCurrenciesRequest\"\x8f\x01\n" +
+	"\bCurrency\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x16\n" +
+	"\x06symbol\x18\x04 \x01(\tR\x06symbol\x12\x1a\n" +
+	"\bdecimals\x18\x05 \x01(\x05R\bdecimals\x12\x17\n" +
+	"\ais_real\x18\x06 \x01(\bR\x06isReal\"K\n" +
+	"\x16ListCurrenciesResponse\x121\n" +
+	"\n" +
+	"currencies\x18\x01 \x03(\v2\x11.auth.v1.CurrencyR\n" +
+	"currencies\"u\n" +
 	"\x14DepositByMemoRequest\x12\x12\n" +
 	"\x04memo\x18\x01 \x01(\tR\x04memo\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x16\n" +
@@ -626,12 +803,13 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"currencyId\"D\n" +
 	"\x0fDepositResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x18\n" +
-	"\aapplied\x18\x02 \x01(\bR\aapplied2\xc8\x03\n" +
+	"\aapplied\x18\x02 \x01(\bR\aapplied2\xb3\x04\n" +
 	"\vAuthService\x12Y\n" +
 	"\bRegister\x12\x18.auth.v1.RegisterRequest\x1a\x15.auth.v1.AuthResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/register\x12P\n" +
 	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x15.auth.v1.AuthResponse\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/v1/auth/login\x12<\n" +
 	"\x02Me\x12\x12.auth.v1.MeRequest\x1a\r.auth.v1.User\"\x13\x82\xd3\xe4\x93\x02\r\x12\v/v1/auth/me\x12f\n" +
-	"\fListAccounts\x12\x1c.auth.v1.ListAccountsRequest\x1a\x1d.auth.v1.ListAccountsResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/auth/accounts\x12f\n" +
+	"\fListAccounts\x12\x1c.auth.v1.ListAccountsRequest\x1a\x1d.auth.v1.ListAccountsResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/auth/accounts\x12i\n" +
+	"\x0eListCurrencies\x12\x1e.auth.v1.ListCurrenciesRequest\x1a\x1f.auth.v1.ListCurrenciesResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/v1/currencies\x12f\n" +
 	"\rDepositByMemo\x12\x1d.auth.v1.DepositByMemoRequest\x1a\x18.auth.v1.DepositResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/depositsB+Z)github.com/nvsces/auth/gen/auth/v1;authv1b\x06proto3"
 
 var (
@@ -646,37 +824,43 @@ func file_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_auth_v1_auth_proto_rawDescData
 }
 
-var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_auth_v1_auth_proto_goTypes = []any{
-	(*RegisterRequest)(nil),      // 0: auth.v1.RegisterRequest
-	(*LoginRequest)(nil),         // 1: auth.v1.LoginRequest
-	(*AuthResponse)(nil),         // 2: auth.v1.AuthResponse
-	(*MeRequest)(nil),            // 3: auth.v1.MeRequest
-	(*User)(nil),                 // 4: auth.v1.User
-	(*ListAccountsRequest)(nil),  // 5: auth.v1.ListAccountsRequest
-	(*Account)(nil),              // 6: auth.v1.Account
-	(*ListAccountsResponse)(nil), // 7: auth.v1.ListAccountsResponse
-	(*DepositByMemoRequest)(nil), // 8: auth.v1.DepositByMemoRequest
-	(*DepositResponse)(nil),      // 9: auth.v1.DepositResponse
+	(*RegisterRequest)(nil),        // 0: auth.v1.RegisterRequest
+	(*LoginRequest)(nil),           // 1: auth.v1.LoginRequest
+	(*AuthResponse)(nil),           // 2: auth.v1.AuthResponse
+	(*MeRequest)(nil),              // 3: auth.v1.MeRequest
+	(*User)(nil),                   // 4: auth.v1.User
+	(*ListAccountsRequest)(nil),    // 5: auth.v1.ListAccountsRequest
+	(*Account)(nil),                // 6: auth.v1.Account
+	(*ListAccountsResponse)(nil),   // 7: auth.v1.ListAccountsResponse
+	(*ListCurrenciesRequest)(nil),  // 8: auth.v1.ListCurrenciesRequest
+	(*Currency)(nil),               // 9: auth.v1.Currency
+	(*ListCurrenciesResponse)(nil), // 10: auth.v1.ListCurrenciesResponse
+	(*DepositByMemoRequest)(nil),   // 11: auth.v1.DepositByMemoRequest
+	(*DepositResponse)(nil),        // 12: auth.v1.DepositResponse
 }
 var file_auth_v1_auth_proto_depIdxs = []int32{
-	4, // 0: auth.v1.AuthResponse.user:type_name -> auth.v1.User
-	6, // 1: auth.v1.ListAccountsResponse.accounts:type_name -> auth.v1.Account
-	0, // 2: auth.v1.AuthService.Register:input_type -> auth.v1.RegisterRequest
-	1, // 3: auth.v1.AuthService.Login:input_type -> auth.v1.LoginRequest
-	3, // 4: auth.v1.AuthService.Me:input_type -> auth.v1.MeRequest
-	5, // 5: auth.v1.AuthService.ListAccounts:input_type -> auth.v1.ListAccountsRequest
-	8, // 6: auth.v1.AuthService.DepositByMemo:input_type -> auth.v1.DepositByMemoRequest
-	2, // 7: auth.v1.AuthService.Register:output_type -> auth.v1.AuthResponse
-	2, // 8: auth.v1.AuthService.Login:output_type -> auth.v1.AuthResponse
-	4, // 9: auth.v1.AuthService.Me:output_type -> auth.v1.User
-	7, // 10: auth.v1.AuthService.ListAccounts:output_type -> auth.v1.ListAccountsResponse
-	9, // 11: auth.v1.AuthService.DepositByMemo:output_type -> auth.v1.DepositResponse
-	7, // [7:12] is the sub-list for method output_type
-	2, // [2:7] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4,  // 0: auth.v1.AuthResponse.user:type_name -> auth.v1.User
+	6,  // 1: auth.v1.ListAccountsResponse.accounts:type_name -> auth.v1.Account
+	9,  // 2: auth.v1.ListCurrenciesResponse.currencies:type_name -> auth.v1.Currency
+	0,  // 3: auth.v1.AuthService.Register:input_type -> auth.v1.RegisterRequest
+	1,  // 4: auth.v1.AuthService.Login:input_type -> auth.v1.LoginRequest
+	3,  // 5: auth.v1.AuthService.Me:input_type -> auth.v1.MeRequest
+	5,  // 6: auth.v1.AuthService.ListAccounts:input_type -> auth.v1.ListAccountsRequest
+	8,  // 7: auth.v1.AuthService.ListCurrencies:input_type -> auth.v1.ListCurrenciesRequest
+	11, // 8: auth.v1.AuthService.DepositByMemo:input_type -> auth.v1.DepositByMemoRequest
+	2,  // 9: auth.v1.AuthService.Register:output_type -> auth.v1.AuthResponse
+	2,  // 10: auth.v1.AuthService.Login:output_type -> auth.v1.AuthResponse
+	4,  // 11: auth.v1.AuthService.Me:output_type -> auth.v1.User
+	7,  // 12: auth.v1.AuthService.ListAccounts:output_type -> auth.v1.ListAccountsResponse
+	10, // 13: auth.v1.AuthService.ListCurrencies:output_type -> auth.v1.ListCurrenciesResponse
+	12, // 14: auth.v1.AuthService.DepositByMemo:output_type -> auth.v1.DepositResponse
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_auth_v1_auth_proto_init() }
@@ -690,7 +874,7 @@ func file_auth_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_v1_auth_proto_rawDesc), len(file_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

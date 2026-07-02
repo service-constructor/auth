@@ -19,11 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_Register_FullMethodName      = "/auth.v1.AuthService/Register"
-	AuthService_Login_FullMethodName         = "/auth.v1.AuthService/Login"
-	AuthService_Me_FullMethodName            = "/auth.v1.AuthService/Me"
-	AuthService_ListAccounts_FullMethodName  = "/auth.v1.AuthService/ListAccounts"
-	AuthService_DepositByMemo_FullMethodName = "/auth.v1.AuthService/DepositByMemo"
+	AuthService_Register_FullMethodName       = "/auth.v1.AuthService/Register"
+	AuthService_Login_FullMethodName          = "/auth.v1.AuthService/Login"
+	AuthService_Me_FullMethodName             = "/auth.v1.AuthService/Me"
+	AuthService_ListAccounts_FullMethodName   = "/auth.v1.AuthService/ListAccounts"
+	AuthService_ListCurrencies_FullMethodName = "/auth.v1.AuthService/ListCurrencies"
+	AuthService_DepositByMemo_FullMethodName  = "/auth.v1.AuthService/DepositByMemo"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -45,6 +46,10 @@ type AuthServiceClient interface {
 	// ListAccounts returns the caller's accounts with live balances (fetched from
 	// the ledger). This powers the personal cabinet's accounts view.
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	// ListCurrencies returns the currency reference catalog (id, code, symbol,
+	// decimals, is_real), proxied from the ledger. The cabinet uses it to label
+	// accounts (DEV/GRAM) and to tell test money (mock-fundable) from real money.
+	ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error)
 	// DepositByMemo credits a deposit to the user identified by memo tag. It is the
 	// demo stand-in for an on-chain watcher: it looks up the user by memo and
 	// credits the ledger. Idempotent on ref.
@@ -99,6 +104,16 @@ func (c *authServiceClient) ListAccounts(ctx context.Context, in *ListAccountsRe
 	return out, nil
 }
 
+func (c *authServiceClient) ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCurrenciesResponse)
+	err := c.cc.Invoke(ctx, AuthService_ListCurrencies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) DepositByMemo(ctx context.Context, in *DepositByMemoRequest, opts ...grpc.CallOption) (*DepositResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DepositResponse)
@@ -128,6 +143,10 @@ type AuthServiceServer interface {
 	// ListAccounts returns the caller's accounts with live balances (fetched from
 	// the ledger). This powers the personal cabinet's accounts view.
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
+	// ListCurrencies returns the currency reference catalog (id, code, symbol,
+	// decimals, is_real), proxied from the ledger. The cabinet uses it to label
+	// accounts (DEV/GRAM) and to tell test money (mock-fundable) from real money.
+	ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error)
 	// DepositByMemo credits a deposit to the user identified by memo tag. It is the
 	// demo stand-in for an on-chain watcher: it looks up the user by memo and
 	// credits the ledger. Idempotent on ref.
@@ -153,6 +172,9 @@ func (UnimplementedAuthServiceServer) Me(context.Context, *MeRequest) (*User, er
 }
 func (UnimplementedAuthServiceServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (UnimplementedAuthServiceServer) ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCurrencies not implemented")
 }
 func (UnimplementedAuthServiceServer) DepositByMemo(context.Context, *DepositByMemoRequest) (*DepositResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DepositByMemo not implemented")
@@ -250,6 +272,24 @@ func _AuthService_ListAccounts_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_ListCurrencies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCurrenciesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ListCurrencies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ListCurrencies_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ListCurrencies(ctx, req.(*ListCurrenciesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_DepositByMemo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DepositByMemoRequest)
 	if err := dec(in); err != nil {
@@ -290,6 +330,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAccounts",
 			Handler:    _AuthService_ListAccounts_Handler,
+		},
+		{
+			MethodName: "ListCurrencies",
+			Handler:    _AuthService_ListCurrencies_Handler,
 		},
 		{
 			MethodName: "DepositByMemo",

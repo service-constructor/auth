@@ -15,11 +15,12 @@ import (
 )
 
 // LedgerAccount is the ledger's view of a provisioned account, returned to auth
-// at registration.
+// at registration and when listing a user's accounts.
 type LedgerAccount struct {
 	WalletID   string
 	TONAddress string
 	Memo       string
+	CurrencyID int64
 }
 
 // Balance is a wallet's available/held for a currency, as reported by the ledger.
@@ -28,11 +29,27 @@ type Balance struct {
 	Held      string
 }
 
+// Currency is a currency from the ledger's reference catalog. IsReal tells test
+// money (mock-fundable) from real money (funded only by on-chain deposits).
+type Currency struct {
+	ID       int64
+	Code     string
+	Name     string
+	Symbol   string
+	Decimals int32
+	IsReal   bool
+}
+
 // LedgerClient is the port to the ledger service. The gRPC client adapter
 // implements it; tests use a fake.
 type LedgerClient interface {
-	// CreateAccount provisions (or returns) a user's ledger account.
+	// CreateAccount provisions (or returns) a user's ledger account for a currency.
 	CreateAccount(ctx context.Context, userID string, currencyID int64) (*LedgerAccount, error)
+	// ListAccounts returns every account a user owns (one per currency).
+	ListAccounts(ctx context.Context, userID string) ([]*LedgerAccount, error)
+	// ListCurrencies returns the ledger's currency catalog (the set of active
+	// currencies a user gets a wallet for at registration).
+	ListCurrencies(ctx context.Context) ([]*Currency, error)
 	// CreditByMemo resolves the account by memo and credits a deposit; returns the
 	// owning user's wallet and whether the credit was applied (false on replay).
 	CreditByMemo(ctx context.Context, memo, ref, amount string, currencyID int64) (userID string, applied bool, err error)
@@ -127,15 +144,29 @@ func (a *Auth) Register(ctx context.Context, login, password string) (string, *d
 		CreatedAt:    now,
 	}
 
-	// Provision the ledger account (wallet + TON deposit routing) and cache the
-	// returned fields on the user for display.
-	acc, err := a.ledger.CreateAccount(ctx, u.ID, a.walletCcyID)
+	// Provision a ledger account (wallet + TON deposit routing) for every active
+	// currency. The default-currency account is cached on the user row for display
+	// (Me, and the primary wallet_id the constructor's /pay path uses).
+	currencies, err := a.ledger.ListCurrencies(ctx)
 	if err != nil {
 		return "", nil, err
 	}
-	u.WalletID = acc.WalletID
-	u.TONAddress = acc.TONAddress
-	u.DepositMemo = acc.Memo
+	for _, c := range currencies {
+		acc, err := a.ledger.CreateAccount(ctx, u.ID, c.ID)
+		if err != nil {
+			return "", nil, err
+		}
+		if c.ID == a.walletCcyID {
+			u.WalletID = acc.WalletID
+			u.TONAddress = acc.TONAddress
+			u.DepositMemo = acc.Memo
+		}
+	}
+	// The default currency must exist in the catalog so the user has a primary
+	// wallet; guard against a misconfigured catalog rather than storing a blank.
+	if u.WalletID == "" {
+		return "", nil, domain.ErrInternal
+	}
 
 	if err := a.store.Create(ctx, u); err != nil {
 		return "", nil, err
@@ -183,38 +214,71 @@ func (a *Auth) Me(ctx context.Context, userID string) (*domain.User, error) {
 	return a.store.ByID(ctx, userID)
 }
 
-// ListAccounts returns the user's accounts with live balances from the ledger.
-// In the demo a user has one account (one currency), created at registration.
+// ListAccounts returns the user's accounts with live balances from the ledger:
+// one per currency the user was provisioned a wallet for at registration.
 func (a *Auth) ListAccounts(ctx context.Context, userID string) ([]*AccountView, error) {
 	if userID == "" {
 		return nil, domain.ErrUnauthenticated
 	}
-	u, err := a.store.ByID(ctx, userID)
+	accs, err := a.ledger.ListAccounts(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	if u.WalletID == "" {
-		return nil, nil
+	views := make([]*AccountView, 0, len(accs))
+	for _, acc := range accs {
+		bal, err := a.ledger.GetBalance(ctx, acc.WalletID, acc.CurrencyID)
+		if err != nil {
+			return nil, err
+		}
+		views = append(views, &AccountView{
+			WalletID:    acc.WalletID,
+			CurrencyID:  acc.CurrencyID,
+			TONAddress:  acc.TONAddress,
+			DepositMemo: acc.Memo,
+			Available:   bal.Available,
+			Held:        bal.Held,
+		})
 	}
-	bal, err := a.ledger.GetBalance(ctx, u.WalletID, a.walletCcyID)
-	if err != nil {
-		return nil, err
-	}
-	return []*AccountView{{
-		WalletID:    u.WalletID,
-		CurrencyID:  a.walletCcyID,
-		TONAddress:  u.TONAddress,
-		DepositMemo: u.DepositMemo,
-		Available:   bal.Available,
-		Held:        bal.Held,
-	}}, nil
+	return views, nil
+}
+
+// ListCurrencies returns the ledger's currency reference catalog, for the
+// cabinet to label accounts and tell test money from real money.
+func (a *Auth) ListCurrencies(ctx context.Context) ([]*Currency, error) {
+	return a.ledger.ListCurrencies(ctx)
 }
 
 // DepositByMemo credits a demo deposit to the user identified by memo, via the
 // ledger. Returns the owning user id and whether the credit was applied.
+//
+// It is a mock funding path, so it only credits test currencies (is_real=false).
+// Real currencies (e.g. GRAM) are funded solely by the on-chain deposit watcher;
+// a mock credit for one is rejected with InvalidArgument.
 func (a *Auth) DepositByMemo(ctx context.Context, memo, ref, amount string, currencyID int64) (string, bool, error) {
 	if memo == "" || ref == "" {
 		return "", false, domain.ErrInvalidArgument
 	}
+	real, err := a.isRealCurrency(ctx, currencyID)
+	if err != nil {
+		return "", false, err
+	}
+	if real {
+		return "", false, domain.ErrRealCurrencyDeposit
+	}
 	return a.ledger.CreditByMemo(ctx, memo, ref, amount, currencyID)
+}
+
+// isRealCurrency reports whether currencyID is real money, per the ledger's
+// catalog. An unknown currency is rejected as an invalid argument.
+func (a *Auth) isRealCurrency(ctx context.Context, currencyID int64) (bool, error) {
+	currencies, err := a.ledger.ListCurrencies(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, c := range currencies {
+		if c.ID == currencyID {
+			return c.IsReal, nil
+		}
+	}
+	return false, domain.ErrInvalidArgument
 }

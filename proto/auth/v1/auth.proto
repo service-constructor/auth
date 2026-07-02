@@ -39,6 +39,13 @@ service AuthService {
     option (google.api.http) = {get: "/v1/auth/accounts"};
   }
 
+  // ListCurrencies returns the currency reference catalog (id, code, symbol,
+  // decimals, is_real), proxied from the ledger. The cabinet uses it to label
+  // accounts (DEV/GRAM) and to tell test money (mock-fundable) from real money.
+  rpc ListCurrencies(ListCurrenciesRequest) returns (ListCurrenciesResponse) {
+    option (google.api.http) = {get: "/v1/currencies"};
+  }
+
   // DepositByMemo credits a deposit to the user identified by memo tag. It is the
   // demo stand-in for an on-chain watcher: it looks up the user by memo and
   // credits the ledger. Idempotent on ref.
@@ -97,6 +104,22 @@ message Account {
 
 message ListAccountsResponse {
   repeated Account accounts = 1;
+}
+
+message ListCurrenciesRequest {}
+
+// Currency is one entry in the reference catalog, mirrored from the ledger.
+message Currency {
+  int64 id = 1;
+  string code = 2;    // short machine code, e.g. DEV, GRAM
+  string name = 3;    // display name
+  string symbol = 4;  // display symbol/ticker
+  int32 decimals = 5; // on-chain precision (informational)
+  bool is_real = 6;   // false = test/dev money (mock-fundable), true = real money
+}
+
+message ListCurrenciesResponse {
+  repeated Currency currencies = 1;
 }
 
 message DepositByMemoRequest {

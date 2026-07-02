@@ -46,7 +46,46 @@ func (c *Client) CreateAccount(ctx context.Context, userID string, currencyID in
 		WalletID:   acc.GetWalletId(),
 		TONAddress: acc.GetTonAddress(),
 		Memo:       acc.GetMemo(),
+		CurrencyID: acc.GetCurrencyId(),
 	}, nil
+}
+
+// ListAccounts returns every account the user owns (one per currency).
+func (c *Client) ListAccounts(ctx context.Context, userID string) ([]*service.LedgerAccount, error) {
+	resp, err := c.svc.ListAccounts(ctx, &ledgerv1.ListAccountsRequest{UserId: userID})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*service.LedgerAccount, 0, len(resp.GetAccounts()))
+	for _, acc := range resp.GetAccounts() {
+		out = append(out, &service.LedgerAccount{
+			WalletID:   acc.GetWalletId(),
+			TONAddress: acc.GetTonAddress(),
+			Memo:       acc.GetMemo(),
+			CurrencyID: acc.GetCurrencyId(),
+		})
+	}
+	return out, nil
+}
+
+// ListCurrencies returns the ledger's currency catalog.
+func (c *Client) ListCurrencies(ctx context.Context) ([]*service.Currency, error) {
+	resp, err := c.svc.ListCurrencies(ctx, &ledgerv1.ListCurrenciesRequest{})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*service.Currency, 0, len(resp.GetCurrencies()))
+	for _, cur := range resp.GetCurrencies() {
+		out = append(out, &service.Currency{
+			ID:       cur.GetId(),
+			Code:     cur.GetCode(),
+			Name:     cur.GetName(),
+			Symbol:   cur.GetSymbol(),
+			Decimals: cur.GetDecimals(),
+			IsReal:   cur.GetIsReal(),
+		})
+	}
+	return out, nil
 }
 
 // GetBalance returns a wallet's available/held for a currency.
