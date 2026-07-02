@@ -2,26 +2,20 @@
 // login/password) with a session JWT compatible with Service Constructor, plus a
 // demo deposit-by-memo endpoint. It provisions each user a ledger account.
 //
-// It serves gRPC with an HTTP/JSON gateway in front. The gateway verifies the
-// bearer JWT and injects the user id as x-user-id gRPC metadata, so downstream
-// handlers (and, in the wider system, the constructor and ledger) see the same
-// authenticated user.
+// It is a pure gRPC service behind the standalone gateway. The gateway verifies
+// the bearer JWT and injects x-user-id metadata, which authenticated handlers
+// (Me, ListAccounts) read to identify the caller.
 package main
 
 import (
 	"context"
 	"log/slog"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 
 	authv1 "github.com/nvsces/auth/gen/auth/v1"
 	"github.com/nvsces/auth/internal/config"
@@ -80,33 +74,10 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
-	// HTTP gateway. The metadata annotator verifies the bearer JWT (when present)
-	// and injects x-user-id so authenticated handlers (Me) see the caller.
-	gwMux := runtime.NewServeMux(runtime.WithMetadata(func(_ context.Context, r *http.Request) metadata.MD {
-		auth := r.Header.Get("Authorization")
-		if !strings.HasPrefix(auth, "Bearer ") {
-			return nil
-		}
-		sub, err := minter.Verify(strings.TrimPrefix(auth, "Bearer "))
-		if err != nil {
-			return nil // unauthenticated; Me will reject
-		}
-		return metadata.Pairs(server.UserIDMetadataKey, sub)
-	}))
-	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	if err := authv1.RegisterAuthServiceHandlerFromEndpoint(ctx, gwMux, cfg.GRPCAddr, dialOpts); err != nil {
-		return err
-	}
-	httpSrv := &http.Server{Addr: cfg.HTTPAddr, Handler: gwMux}
-
-	serveErr := make(chan error, 2)
+	serveErr := make(chan error, 1)
 	go func() {
 		log.Info("gRPC server listening", "addr", cfg.GRPCAddr, "ledger", cfg.LedgerAddr)
 		serveErr <- grpcServer.Serve(lis)
-	}()
-	go func() {
-		log.Info("HTTP gateway listening", "addr", cfg.HTTPAddr)
-		serveErr <- httpSrv.ListenAndServe()
 	}()
 
 	select {
@@ -114,9 +85,6 @@ func run(log *slog.Logger) error {
 		return err
 	case <-ctx.Done():
 		log.Info("shutting down")
-		shCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
-		defer cancel()
-		_ = httpSrv.Shutdown(shCtx)
 		grpcServer.GracefulStop()
 		return nil
 	}

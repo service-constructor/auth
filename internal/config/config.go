@@ -14,8 +14,6 @@ type Config struct {
 	DatabaseURL string
 	// GRPCAddr is the listen address for the gRPC server.
 	GRPCAddr string
-	// HTTPAddr is the listen address for the HTTP gateway.
-	HTTPAddr string
 	// JWTSecret signs session tokens; it MUST match the constructor's
 	// AUTH_JWT_SECRET so tokens minted here are accepted there.
 	JWTSecret string
@@ -37,7 +35,6 @@ func Load() (Config, error) {
 	c := Config{
 		DatabaseURL:       env("DATABASE_URL", "postgres://sc:sc@localhost:5432/auth?sslmode=disable"),
 		GRPCAddr:          env("GRPC_ADDR", ":9200"),
-		HTTPAddr:          env("HTTP_ADDR", ":8090"),
 		JWTSecret:         env("AUTH_JWT_SECRET", "devsecret"),
 		TokenTTL:          24 * time.Hour,
 		LedgerAddr:        env("LEDGER_ADDR", "localhost:9110"),
